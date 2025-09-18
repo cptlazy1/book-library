@@ -13,7 +13,9 @@
     {% endif %}
 
     {% for book in all_books %}
-    <li>{{ book.book_name }} by {{ book.book_author }} with a rating of {{ book.book_rating }}</li>
+    <li>{{ book.book_name }} by {{ book.book_author }} with a rating of {{ book.book_rating }}
+    <a href="{{ url_for('edit', book_id=book.id) }}">Edit Rating</a>
+    </li>
     {% endfor %}
 </ul>
 
@@ -21,6 +23,3 @@
 <a href="{{ url_for('add') }}">Add New Book</a>
 </body>
 </html>
-
-
-

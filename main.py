@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String
+from werkzeug.exceptions import NotFound, abort
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///books-collection.db'
@@ -25,6 +26,7 @@ class Book(db.Model):
 with app.app_context():
     db.create_all()
 
+
 @app.route('/')
 def home():
     all_books = Book.query.all()
@@ -37,7 +39,7 @@ def add():
         new_book = Book(
             book_name=request.form["book_name"],
             book_author=request.form["book_author"],
-            book_rating=request.form["book_rating"]
+            book_rating=int(request.form["book_rating"])  # ensure integer
         )
         db.session.add(new_book)
         db.session.commit()
@@ -45,6 +47,35 @@ def add():
         return redirect(url_for('home'))
 
     return render_template("add.html")
+
+
+@app.route("/edit-rating", methods=["GET"])
+def edit_redirect():
+    # Support legacy query-string links: /edit-rating?book_id=1
+    book_id = request.args.get("book_id", type=int)
+    if not book_id:
+        raise NotFound()
+    return redirect(url_for('edit', book_id=book_id))
+
+
+@app.route("/edit-rating/<int:book_id>", methods=["GET", "POST"])
+def edit(book_id):
+    if request.method == "POST":
+        book_to_update = Book.query.get(book_id)
+        if not book_to_update:
+            abort(404)
+        # ensure integer input; simple guard
+        try:
+            book_to_update.book_rating = int(request.form["book_rating"])
+        except (KeyError, ValueError, TypeError):
+            abort(400)
+        db.session.commit()
+        return redirect(url_for('home'))
+    else:
+        book = Book.query.get(book_id)
+        if not book:
+            return render_template("edit_rating.html", book=book)
+        return render_template("edit_rating.html", book=book)
 
 
 if __name__ == "__main__":
